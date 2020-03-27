@@ -1,0 +1,25 @@
+subscriptionId="4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1"
+location="southeastasia"
+shared_network_rg="PrivateFunctionNetworkRG"
+network_name="vnet1"
+services_subnet="services"
+privateservices_subnet="privateservices"
+function_subnet="functionapp"
+
+az network vnet create -g $shared_network_rg -n $network_name --address-prefix 10.1.0.0/16 --subnet-name $services_subnet --subnet-prefix 10.1.0.0/27
+
+az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --address-prefixes 10.1.1.0/27
+
+az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n $function_subnet --address-prefixes 10.1.2.0/27
+
+#Restrict all outbound access from the vnet
+az network nsg create --name Lockdown -g $shared_network_rg
+az network nsg rule create --name blockoutrule --nsg-name Lockdown -g $shared_network_rg --priority 100 --direction Outbound --access Deny --source-address-prefixes VirtualNetwork --destination-port-ranges '*' --protocol '*' --description "Block all outbound traffic origination from vnet"
+
+# Restrict all inbound access from the vnet
+az network nsg rule create --name blockinrule --nsg-name Lockdown -g $shared_network_rg --priority 100 --direction Inbound --access Deny --source-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all inbound traffic"
+
+#Associate NSG with subnets
+az network vnet subnet update -g $shared_network_rg --name $privateservices_subnet --vnet-name $network_name --network-security-group Lockdown
+az network vnet subnet update -g $shared_network_rg --name $services_subnet --vnet-name $network_name --network-security-group Lockdown
+az network vnet subnet update -g $shared_network_rg --name $function_subnet --vnet-name $network_name --network-security-group Lockdown

@@ -1,0 +1,40 @@
+# Create the basic shared resources needed for the application
+# CosmosDB
+# Storage Account (for Storage queues)
+# Service Bus
+# Event Hub
+# Key Vault
+
+location="southeastasia"
+shared_rg="PrivateFunctionSharedRG"
+cosmosdb_account_name="rezacosmosacc"
+cosmosdb_database_name="rezadb"
+cosmosdb_container_name="rezacontainer"
+storage_name="rezasharedstor"
+storage_access_tier="Hot"
+storage_sku="Standard_LRS"
+storage_kind="StorageV2"
+storage_queue="queue"
+storage_container="sharedcontainer"
+eventhub_name="rezasharedhub"
+eventhub_namespace="rezahub"
+
+#CosmosDB
+az cosmosdb create -n $cosmosdb_account_name -g $shared_rg --locations regionName=$location
+az cosmosdb sql database create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_database_name
+az cosmosdb sql container create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_container_name -p '/id' --throughput 400 -d $cosmosdb_database_name
+
+#Storage Account
+az storage account create --name $storage_name --resource-group $shared_rg --location $location --access-tier $storage_access_tier --sku $storage_sku --kind $storage_kind
+
+storage_key=$(az storage account keys list --account-name $storage_name --query '[0]'.value -o tsv)
+
+# Create a queue to test initial simple case of reading off queue to store into CosmosDB
+az storage queue create --name $storage_queue --account-name $storage_name --account-key $storage_key --auth-mode key
+
+# Create a blob container to simulate a file landing
+az storage container create --name $storage_container --account-name $storage_name --account-key $storage_key --auth-mode key
+
+# Create an Event Hub as a sink for blob file records
+az eventhubs namespace create --name $eventhub_namespace -g $shared_rg --sku Basic --location $location
+az eventhubs eventhub create --name $eventhub_name -g $shared_rg --namespace-name $eventhub_namespace --message-retention 1

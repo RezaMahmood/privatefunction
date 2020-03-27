@@ -1,0 +1,14 @@
+subscriptionId="4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1"
+location="southeastasia"
+shared_rg="PrivateFunctionSharedRG"
+shared_network_rg="PrivateFunctionNetworkRG"
+app_rg="PrivateFunctionAppRG"
+
+az login
+
+az account set -s $subscriptionId
+
+#Create Resource Groups for the application
+az group create -l $location -n $shared_rg
+az group create -l $location -n $shared_network_rg
+az group create -l $location -n $app_rg

@@ -1,0 +1,40 @@
+location="southeastasia"
+shared_rg="PrivateFunctionSharedRG"
+shared_network_rg="PrivateFunctionNetworkRG"
+app_rg="PrivateFunctionAppRG"
+network_name="vnet1"
+function_subnet="functionapp"
+
+functionapp_name="rezafuncapp"
+functionapp_plan="rezafuncplan"
+
+
+storage_name="rezafuncappstor"
+storage_access_tier="Hot"
+storage_sku="Standard_LRS"
+storage_kind="StorageV2"
+
+cosmosdb_account_name="rezacosmosacc"
+sharedstorage_name="rezafuncstor"
+eventhub_name="rezasharedhub"
+eventhub_namespace="rezahub"
+
+#Separate Storage account for Functions backing store
+az storage account create --name $storage_name --resource-group $app_rg --location $location --access-tier $storage_access_tier --sku $storage_sku --kind $storage_kind
+
+az functionapp plan create --name $functionapp_plan -g $app_rg --location $location --sku EP1
+
+az functionapp create --name $functionapp_name --resource-group $app_rg --storage-account $storage_name --runtime-version 3 --functions-version 3 --os-type Linux --runtime dotnet --plan $functionapp_plan
+
+#Configure vnet integration
+az functionapp vnet-integration add -g $app_rg --name $functionapp_name --vnet $network_name --subnet $function_subnet
+
+#Configure application settings
+cosmos_connectionstring=$(az cosmosdb keys list --name $cosmosdb_account_name -g $shared_rg --type connection-strings --query connectionStrings[0].connectionString -o tsv)
+sharedstor_connectionstring=$(az storage account show-connection-string -g $shared_rg -n $sharedstorage_name --query connectionString -o tsv)
+eventhub_connectionstring=$(az eventhubs eventhub authorization-rule keys list -g $shared_rg --namespace-name $eventhub_namespace --eventhub-name $eventhub_name -n Send --query primaryConnectionString -o tsv)
+
+az functionapp config appsettings set -n $functionapp_name -g $app_rg --settings "CosmosDBConnection"=$cosmos_connectionstring "SharedStor"=$sharedstor_connectionstring "EventHubConnection"=$eventhub_connectionstring "EventHubName"="rezasharedhub" WEBSITE_VNET_ROUTE_ALL=1
+
+#Enable virtual network trigger support - https://docs.microsoft.com/en-gb/azure/azure-functions/functions-networking-options#virtual-network-triggers-non-http
+az resource update -g $app_rg -n $functionapp_name/config/web --set properties.functionsRuntimeScaleMonitoringEnabled=1 --resource-type Microsoft.Web/sites
