@@ -1,10 +1,3 @@
-subscriptionId="4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1"
-location="southeastasia"
-shared_network_rg="PrivateFunctionNetworkRG"
-network_name="vnet1"
-services_subnet="services"
-privateservices_subnet="privateservices"
-function_subnet="functionapp"
 
 az network vnet create -g $shared_network_rg -n $network_name --address-prefix 10.1.0.0/16 --subnet-name $services_subnet --subnet-prefix 10.1.0.0/27
 

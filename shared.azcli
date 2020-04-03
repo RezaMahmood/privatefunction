@@ -5,20 +5,6 @@
 # Event Hub
 # Key Vault
 
-location="southeastasia"
-shared_rg="PrivateFunctionSharedRG"
-cosmosdb_account_name="rezacosmosacc"
-cosmosdb_database_name="rezadb"
-cosmosdb_container_name="rezacontainer"
-storage_name="rezasharedstor"
-storage_access_tier="Hot"
-storage_sku="Standard_LRS"
-storage_kind="StorageV2"
-storage_queue="queue"
-storage_container="sharedcontainer"
-eventhub_name="rezasharedhub"
-eventhub_namespace="rezahub"
-
 #CosmosDB
 az cosmosdb create -n $cosmosdb_account_name -g $shared_rg --locations regionName=$location
 az cosmosdb sql database create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_database_name
@@ -35,6 +21,16 @@ az storage queue create --name $storage_queue --account-name $storage_name --acc
 # Create a blob container to simulate a file landing
 az storage container create --name $storage_container --account-name $storage_name --account-key $storage_key --auth-mode key
 
+# Create the storage account that the Function should not have access to
+az storage account create --name $noaccess_storage_name --resource-group $shared_rg --location $location --access-tier $noaccess_storage_access_tier --sku $noaccess_storage_sku --kind $noaccess_storage_kind
+noaccess_storage_key=$(az storage account keys list --account-name $noaccess_storage_name --query '[0]'.value -o tsv)
+az storage container create --name $noaccess_storage_container --account-name $noaccess_storage_name --account-key $noaccess_storage_key --auth-mode key
+# Upload a file that should not be accessible from the Function if the Function has the correct access key to it
+noaccess_storage_connectionstring=$(az storage account show-connection-string -g $shared_rg -n $noaccess_storage_name --query connectionString -o tsv)
+az storage blob upload --account-name $noaccess_storage_name -f $noaccess_storage_file -c $noaccess_storage_container -n $noaccess_storage_file --connection-string $noaccess_storage_connectionstring
+
 # Create an Event Hub as a sink for blob file records
 az eventhubs namespace create --name $eventhub_namespace -g $shared_rg --sku Basic --location $location
 az eventhubs eventhub create --name $eventhub_name -g $shared_rg --namespace-name $eventhub_namespace --message-retention 1
+# Create a Send policy
+az eventhubs eventhub authorization-rule create --eventhub-name $eventhub_name --name Send -g $shared_rg --namespace-name $eventhub_namespace --rights Send
