@@ -1,22 +1,37 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+The scripts in this repo are intended to deploy Azure Functions to demonstrate network isolation when communicating with other Azure PaaS services.
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+## Getting Started
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+1. Installation Process
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+- Edit base.azcli to set environment variables.  Note that some variables are globally unique such as storage account names.
+  
+- Run scripts in the following order:
 
-Hi Andre!
+  - base.azcli
+
+  - network.azcli
+
+  - shared.azcli
+
+  - function.azcli
+
+## Description of scripts
+
+### base.azcli
+
+This file contains variables required to deploy the environment and is used by subsequent cli scripts.  This file should be edited to use unique Azure resource names.  In addition, 3 resource groups are created to host network, shared resources and application specific resources.  This script will also log you in to Azure and set the subscription that the resources will be deployed to - you will need to remove "az login" if you wish to use a pipeline for non-interactive deployment and edit the subscription Id to reference your own subscription.
+
+### network.azcli
+
+This file contains all the base network configurations including NSG and subnet configurations.
+
+### shared.azcli
+
+This file contains all the shared resources that the application will use such as Storage, Event Hubs and CosmosDB Accounts.
+
+### function.azcli
+
+This file contains configuration for the Function App that will be network isolated.  This needs to be run last as it will use variables from resources created previously such as CosmosDB and Storage Account connection strings.
