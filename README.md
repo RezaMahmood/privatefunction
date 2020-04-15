@@ -6,6 +6,8 @@ The scripts in this repo are intended to deploy Azure Functions to demonstrate n
 
 1. Installation Process
 
+- Go and install jq to enable json parsing - https://stedolan.github.io/jq/
+
 - Edit base.azcli to set environment variables.  Note that some variables are globally unique such as storage account names.
   
 - Run scripts in the following order:
@@ -17,6 +19,8 @@ The scripts in this repo are intended to deploy Azure Functions to demonstrate n
   - shared.azcli
 
   - function.azcli
+
+  - lockdown.azcli
 
 ## Description of scripts
 
@@ -32,6 +36,16 @@ This file contains all the base network configurations including NSG and subnet 
 
 This file contains all the shared resources that the application will use such as Storage, Event Hubs and CosmosDB Accounts.
 
+App Service does not support Azure Private DNS Zones yet, so we will need to install a DNS server and configure that to use the Private Link address.
+
 ### function.azcli
 
 This file contains configuration for the Function App that will be network isolated.  This needs to be run last as it will use variables from resources created previously such as CosmosDB and Storage Account connection strings.
+
+### lockdown.azcli
+
+This file applies NSG to the subnets to prevent Function App from going beyond the vnet
+
+## TO DO
+
+Set up Linux DNS server using bind9 and setting forwarder to use 168.63.129.16 to resolve privatelink CNames
