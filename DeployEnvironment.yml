@@ -16,25 +16,25 @@ steps:
     azureSubscription: 'Reza Internal AIRS (4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1)'
     scriptType: 'bash'
     scriptLocation: 'scriptPath'
-    scriptPath: '$(System.DefaultWorkingDirectory)/_EnvSource/base.sh'
+    scriptPath: '$(System.DefaultWorkingDirectory)/base.sh'
 
 - task: AzureCLI@2
   inputs:
     azureSubscription: 'Reza Internal AIRS (4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1)'
     scriptType: 'bash'
     scriptLocation: 'scriptPath'
-    scriptPath: '$(System.DefaultWorkingDirectory)/_EnvSource/network.sh'
+    scriptPath: '$(System.DefaultWorkingDirectory)/network.sh'
 
 - task: AzureCLI@2
   inputs:
     azureSubscription: 'Reza Internal AIRS (4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1)'
     scriptType: 'bash'
     scriptLocation: 'scriptPath'
-    scriptPath: '$(System.DefaultWorkingDirectory)/_EnvSource/shared.sh'
+    scriptPath: '$(System.DefaultWorkingDirectory)/shared.sh'
 
 - task: AzureCLI@2
   inputs:
     azureSubscription: 'Reza Internal AIRS (4fe0a42b-c304-4bd3-8d1d-42efcdf1a0a1)'
     scriptType: 'bash'
     scriptLocation: 'scriptPath'
-    scriptPath: '$(System.DefaultWorkingDirectory)/_EnvSource/function.sh'
+    scriptPath: '$(System.DefaultWorkingDirectory)/function.sh'
