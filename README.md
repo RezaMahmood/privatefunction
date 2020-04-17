@@ -1,6 +1,6 @@
 # Introduction 
 
-The scripts in this repo are intended to deploy Azure Functions to demonstrate network isolation when communicating with other Azure PaaS services.
+The scripts in this repo are intended to deploy Azure Functions to demonstrate network isolation when communicating with other Azure PaaS services.  Note that this deployment does not represent a best practice way of creating Azure resources and is mainly intended to demonstrate the principles behind locking down Azure PaaS services and applying network isolation.  For example, resources should be locked down at the point they are created rather than executing a script afterwards to apply security principles.
 
 ## Getting Started
 
@@ -22,7 +22,25 @@ The scripts in this repo are intended to deploy Azure Functions to demonstrate n
 
   - function.sh
 
-  - lockdown.sh
+  - lockdown.sh (leave this until everything else has been set up, including configuring test set up)
+
+- Deploy the application to the Function App you have just created!
+
+
+## Testing the lockdown
+
+### PrivateCosmosFunction
+
+This function uses a storage queue trigger.  For each queue it finds, it will generate a random ID and then store to CosmosDB.  Test this out by placing one or more messages on the queue and watching them appear in the CosmosDB container.  To check that the FunctionApp is using Private Endpoints, open up a Kudu command shell on the Function App and type:
+
+- nameresolver [sharedstorageaccountname].queue.core.windows.net
+  - this should resolve to a non-routable local IP address like 10.1.1.4 and display a CNAME to [sharedstorageaccountname].privatelink.queue.core.windows.net
+- nameresolver [cosmosdbaccountname].documents.azure.com
+  - this should resolve to a non-routable local IP address like 10.1.1.5 and display a CNAME to [cosmosdbaccountname].privatelink.documents.azure.com
+
+### PrivateFilesFunction
+
+This function uses a blob trigger.  For each file it finds, it will parse the file and create a batch of events to send to EventHub.  Test this out by placing a file into a container called "sharedcontainer", ensuring it has multiple lines of text in it.  Messages should appear in EventHub, one per line in the file.
 
 ## Description of scripts
 

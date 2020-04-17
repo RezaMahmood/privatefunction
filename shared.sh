@@ -21,20 +21,37 @@ az storage container create --name $storage_container --account-name $storage_na
 #Need to disable subnet private endpoint policy
 az network vnet subnet update -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --disable-private-endpoint-network-policies true
 # Create private endpoint for the queue endpoint of the shared storage account
-az network private-endpoint create --name ${storage_name}-pe --connection-name ${storage_name}-queue-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $storage_id --group-ids queue
+az network private-endpoint create --name ${storage_name}-queue-pe --connection-name ${storage_name}-queue-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $storage_id --group-ids queue
+# Create private endpoint for the blob endpoint of the shared storage account
+az network private-endpoint create --name ${storage_name}-blob-pe --connection-name ${storage_name}-blob-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $storage_id --group-ids blob
 # Create private DNS zone for the private queue endpoint
 az network private-dns zone create -g $shared_network_rg -n "privatelink.queue.core.windows.net"
 az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.queue.core.windows.net" --name sharedqueuednslink --virtual-network $network_name --registration-enabled false
+# Create private DNS zone for the private blob endpoint
+az network private-dns zone create -g $shared_network_rg -n "privatelink.blob.core.windows.net"
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.blob.core.windows.net" --name sharedblobdnslink --virtual-network $network_name --registration-enabled false
 
-#Query for the network interface ID created as part of private endpoint
-storage_networkInterfaceId=$(az network private-endpoint show --name ${storage_name}-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
-storage_nic_object=$(az resource show --ids $storage_networkInterfaceId --api-version 2019-04-01 -o json)
+
+#Query for the network interface ID created as part of private queue endpoint
+storage_q_networkInterfaceId=$(az network private-endpoint show --name ${storage_name}-queue-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
+storage_q_nic_object=$(az resource show --ids $storage_q_networkInterfaceId --api-version 2019-04-01 -o json)
 # Get the content for privateIPAddress and FQDN matching the SQL server name - this needs to have jq installed - https://stedolan.github.io/jq/
-storage_nic_ip=$(echo $storage_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
+storage_q_nic_ip=$(echo $storage_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
 
-#Create DNS records 
+#Create DNS records for queue endpoint
 az network private-dns record-set a create --name $storage_name --zone-name "privatelink.queue.core.windows.net" --resource-group $shared_network_rg  
-az network private-dns record-set a add-record --record-set-name $storage_name --zone-name "privatelink.queue.core.windows.net" --resource-group $shared_network_rg -a $storage_nic_ip
+az network private-dns record-set a add-record --record-set-name $storage_name --zone-name "privatelink.queue.core.windows.net" --resource-group $shared_network_rg -a $storage_q_nic_ip
+
+#Query for the network interface ID created as part of private blob endpoint
+storage_b_networkInterfaceId=$(az network private-endpoint show --name ${storage_name}-blob-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
+storage_b_nic_object=$(az resource show --ids $storage_b_networkInterfaceId --api-version 2019-04-01 -o json)
+# Get the content for privateIPAddress and FQDN matching the SQL server name - this needs to have jq installed - https://stedolan.github.io/jq/
+storage_b_nic_ip=$(echo $storage_b_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
+
+#Create DNS records for blob endpoint
+az network private-dns record-set a create --name $storage_name --zone-name "privatelink.blob.core.windows.net" --resource-group $shared_network_rg  
+az network private-dns record-set a add-record --record-set-name $storage_name --zone-name "privatelink.blob.core.windows.net" --resource-group $shared_network_rg -a $storage_b_nic_ip
+
 
 # Create the storage account that the Function should not have access to
 az storage account create --name $noaccess_storage_name --resource-group $shared_rg --location $location --access-tier $noaccess_storage_access_tier --sku $noaccess_storage_sku --kind $noaccess_storage_kind
@@ -44,8 +61,8 @@ az storage container create --name $noaccess_storage_container --account-name $n
 noaccess_storage_connectionstring=$(az storage account show-connection-string -g $shared_rg -n $noaccess_storage_name --query connectionString -o tsv)
 az storage blob upload --account-name $noaccess_storage_name -f $noaccess_storage_file -c $noaccess_storage_container -n $noaccess_storage_file --connection-string $noaccess_storage_connectionstring
 
-#CosmosDB
-cosmosdb_object=$(az cosmosdb create -n $cosmosdb_account_name -g $shared_rg --locations regionName=$location)
+#CosmosDB. Note for purpose of this POC, we will allow access from the functions subnet and the services subnet (where the DNS server sits)
+cosmosdb_object=$(az cosmosdb create -n $cosmosdb_account_name -g $shared_rg --locations regionName=$location --enable-virtual-network true --ip-range-filter 10.1.0.0/27,10.1.2.0/27)
 cosmosdb_account_id=$(echo $cosmosdb_object | jq -rc '.id')
 az cosmosdb sql database create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_database_name
 az cosmosdb sql container create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_container_name -p '/id' --throughput 400 -d $cosmosdb_database_name
@@ -63,7 +80,7 @@ cosmosdb_nic_ip=$(echo $cosmosdb_nic_object | jq -rc '.properties.ipConfiguratio
 
 #Create DNS records 
 az network private-dns record-set a create --name $cosmosdb_account_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg  
-az network private-dns record-set a add-record --record-set-name $storage_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg -a $cosmosdb_nic_ip
+az network private-dns record-set a add-record --record-set-name $cosmosdb_account_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg -a $cosmosdb_nic_ip
 
 
 
@@ -74,8 +91,20 @@ az eventhubs eventhub create --name $eventhub_name -g $shared_rg --namespace-nam
 az eventhubs eventhub authorization-rule create --eventhub-name $eventhub_name --name Send -g $shared_rg --namespace-name $eventhub_namespace --rights Send
 
 
+
 # Create Key Vault
 keyvault_object=$(az keyvault create -n $keyvault_name -g $shared_rg --location $location)
 az keyvault secret set --vault-name $keyvault_name --name $keyvault_secret_name --value $keyvault_secret_value
+keyvault_id=$(echo $keyvault_object | jq -rc '.id')
 # Set private link for key vault
-
+az network private-endpoint create --name ${keyvault_name}-pe --connection-name ${keyvault_name}-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $keyvault_id --group-ids vault
+# Create private DNS zone for private keyvault
+az network private-dns zone create -g $shared_network_rg -n "privatelink.vaultcore.azure.net"
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.vaultcore.azure.net" --name sharedvaultdnslink --virtual-network $network_name --registration-enabled false
+#Query for the NIC of the vault private endpoint
+keyvault_networkInterfaceId=$(az network private-endpoint show --name ${keyvault_name}-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
+keyvault_nic_object=$(az resource show --ids $keyvault_networkInterfaceId --api-version 2019-04-01 -o json)
+keyvault_nic_ip=$(echo $keyvault_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
+#Create DNS records for keyvault private link
+az network private-dns record-set a create --name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg
+az network private-dns record-set a add-record --record-set-name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg -a $keyvault_nic_ip

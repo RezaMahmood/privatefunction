@@ -15,7 +15,7 @@ cosmosdb_account_name="rezacosmosacc"
 cosmosdb_database_name="rezadb"
 cosmosdb_container_name="rezacontainer"
 
-storage_name="rezasharedstor3"
+storage_name="rezasharedstor4"
 storage_access_tier="Hot"
 storage_sku="Standard_LRS"
 storage_kind="StorageV2"
