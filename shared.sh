@@ -108,3 +108,15 @@ keyvault_nic_ip=$(echo $keyvault_nic_object | jq -rc '.properties.ipConfiguratio
 #Create DNS records for keyvault private link
 az network private-dns record-set a create --name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg
 az network private-dns record-set a add-record --record-set-name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg -a $keyvault_nic_ip
+
+
+# Create Service Endpoints for all services that need to be accessed via private endpoint
+az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB Microsoft.KeyVault --name $function_subnet
+function_subnet_id=$(az network vnet subnet show -g $shared_network_rg -n $function_subnet --vnet-name $network_name --query 'id' -o tsv)
+
+az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $function_subnet_id --action allow
+az cosmosdb network-rule add -g $shared_rg --name $cosmosdb_account_name --subnet $function_subnet_id -g $shared_rg --vnet-name $network_name
+
+az keyvault update --name $keyvault_name --resource-group $shared_rg --default-action deny
+# Only allow access to keyvault from FunctionApp subnet
+az keyvault network-rule add --name $keyvault_name -g $shared_rg --subnet $function_subnet_id --vnet-name $network_name
