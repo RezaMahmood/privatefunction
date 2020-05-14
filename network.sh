@@ -15,13 +15,12 @@ az network nsg rule create --name allowdns --nsg-name Lockdown -g $shared_networ
 # Create rules to restrict all inbound access from the vnet
 az network nsg rule create --name blockinrule --nsg-name Lockdown -g $shared_network_rg --priority 100 --direction Inbound --access Deny --source-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all inbound traffic"
 
-# Create a DNS server
-# Note this could be done with bind9 on linux and only using forwarder DNS resolution with 168.63.129.16 - ##TODO
+# Create a DNS server - no longer required - will repurpose to jump/test box
 vm_dns_obj=$(az vm create -g $shared_network_rg -n $vm_dns --image Win2016Datacenter --admin-username $vm_dns_username --vnet-name $network_name --subnet $services_subnet --public-ip-address "" --private-ip-address $vm_dns_privateip --authentication-type password --admin-password $vm_dns_adminpassword --size Standard_B2ms )
 
 # Create a Bastion
 az network public-ip create -n BastionPIP -g $shared_network_rg --sku Standard
 az network bastion create -n MyBastion --public-ip-address BastionPIP -g $shared_network_rg --vnet-name $network_name --location $location
 
-# Reference new VM as the DNS server for the vnet
-az network vnet update -g $shared_network_rg -n $network_name --dns-servers $vm_dns_privateip
+# Reference new VM as the DNS server for the vnet - no longer needed as app service can now use private zones (configured later)
+# az network vnet update -g $shared_network_rg -n $network_name --dns-servers $vm_dns_privateip

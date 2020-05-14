@@ -1,12 +1,16 @@
 # Introduction 
 
-The scripts in this repo are intended to deploy Azure Functions to demonstrate network isolation when communicating with other Azure PaaS services.  Note that this deployment does not represent a best practice way of creating Azure resources and is mainly intended to demonstrate the principles behind locking down Azure PaaS services and applying network isolation.  For example, resources should be locked down at the point they are created rather than executing a script afterwards to apply security principles.
+The scripts in this repo are intended to deploy Azure Functions to demonstrate network isolation when communicating with other Azure PaaS services.  Note that this deployment does not represent a best practice way of creating Azure resources and is mainly intended to demonstrate the principles behind locking down Azure PaaS services and applying network isolation.
+
+## Architecture
+
+
 
 ## Getting Started
 
 1. Installation Process
 
-- Go and install jq to enable json parsing - https://stedolan.github.io/jq/
+- Install jq to enable json parsing - https://stedolan.github.io/jq/
 
 - Edit base.sh to set environment variables.  Note that some variables are globally unique such as storage account names.
   
@@ -26,6 +30,9 @@ The scripts in this repo are intended to deploy Azure Functions to demonstrate n
 
 - Deploy the application to the Function App you have just created!
 
+- Set up the Jump Box
+
+  - Install Azure Storage Explorer
 
 ## Testing the lockdown
 
@@ -69,7 +76,3 @@ This file contains configuration for the Function App that will be network isola
 ### lockdown.sh
 
 This file applies NSG to the subnets to prevent Function App from going beyond the vnet
-
-## TO DO
-
-Set up Linux DNS server using bind9 and setting forwarder to use 168.63.129.16 to resolve privatelink CNames

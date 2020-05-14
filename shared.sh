@@ -17,7 +17,6 @@ az storage queue create --name $storage_queue --account-name $storage_name --acc
 # Create a blob container to simulate a file landing
 az storage container create --name $storage_container --account-name $storage_name --account-key $storage_key --auth-mode key
 
-#Note to self: precedence appears to be important
 #Need to disable subnet private endpoint policy
 az network vnet subnet update -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --disable-private-endpoint-network-policies true
 # Create private endpoint for the queue endpoint of the shared storage account
@@ -36,10 +35,11 @@ az network private-dns link vnet create -g $shared_network_rg --zone-name "priva
 storage_q_networkInterfaceId=$(az network private-endpoint show --name ${storage_name}-queue-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
 storage_q_nic_object=$(az resource show --ids $storage_q_networkInterfaceId --api-version 2019-04-01 -o json)
 # Get the content for privateIPAddress and FQDN matching the SQL server name - this needs to have jq installed - https://stedolan.github.io/jq/
-storage_q_nic_ip=$(echo $storage_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
+storage_q_nic_ip=$(echo $storage_q_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
 
 #Create DNS records for queue endpoint
 az network private-dns record-set a create --name $storage_name --zone-name "privatelink.queue.core.windows.net" --resource-group $shared_network_rg  
+echo "Creating Private DNS A Record for privatelink.queue.core.windows.net"
 az network private-dns record-set a add-record --record-set-name $storage_name --zone-name "privatelink.queue.core.windows.net" --resource-group $shared_network_rg -a $storage_q_nic_ip
 
 #Query for the network interface ID created as part of private blob endpoint
@@ -50,6 +50,7 @@ storage_b_nic_ip=$(echo $storage_b_nic_object | jq -rc '.properties.ipConfigurat
 
 #Create DNS records for blob endpoint
 az network private-dns record-set a create --name $storage_name --zone-name "privatelink.blob.core.windows.net" --resource-group $shared_network_rg  
+echo "Creating Private DNS A Record for privatelink.blob.core.windows.net"
 az network private-dns record-set a add-record --record-set-name $storage_name --zone-name "privatelink.blob.core.windows.net" --resource-group $shared_network_rg -a $storage_b_nic_ip
 
 
@@ -61,8 +62,8 @@ az storage container create --name $noaccess_storage_container --account-name $n
 noaccess_storage_connectionstring=$(az storage account show-connection-string -g $shared_rg -n $noaccess_storage_name --query connectionString -o tsv)
 az storage blob upload --account-name $noaccess_storage_name -f $noaccess_storage_file -c $noaccess_storage_container -n $noaccess_storage_file --connection-string $noaccess_storage_connectionstring
 
-#CosmosDB. Note for purpose of this POC, we will allow access from the functions subnet and the services subnet (where the DNS server sits)
-cosmosdb_object=$(az cosmosdb create -n $cosmosdb_account_name -g $shared_rg --locations regionName=$location --enable-virtual-network true --ip-range-filter 10.1.0.0/27,10.1.2.0/27)
+#CosmosDB. Note for purpose of this POC, we will allow access from the functions subnet and the services subnet (where the jump/test box sits)
+cosmosdb_object=$(az cosmosdb create -n $cosmosdb_account_name -g $shared_rg --locations regionName=$location --enable-virtual-network true --ip-range-filter 10.1.0.0/27)
 cosmosdb_account_id=$(echo $cosmosdb_object | jq -rc '.id')
 az cosmosdb sql database create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_database_name
 az cosmosdb sql container create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_container_name -p '/id' --throughput 400 -d $cosmosdb_database_name
@@ -80,6 +81,7 @@ cosmosdb_nic_ip=$(echo $cosmosdb_nic_object | jq -rc '.properties.ipConfiguratio
 
 #Create DNS records 
 az network private-dns record-set a create --name $cosmosdb_account_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg  
+echo "Creating Private DNS A Record for privatelink.documents.azure.com"
 az network private-dns record-set a add-record --record-set-name $cosmosdb_account_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg -a $cosmosdb_nic_ip
 
 
@@ -107,15 +109,21 @@ keyvault_nic_object=$(az resource show --ids $keyvault_networkInterfaceId --api-
 keyvault_nic_ip=$(echo $keyvault_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
 #Create DNS records for keyvault private link
 az network private-dns record-set a create --name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg
+echo "Creating Private DNS A Record for privatelink.vaultcore.azure.net"
 az network private-dns record-set a add-record --record-set-name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg -a $keyvault_nic_ip
 
 
-# Create Service Endpoints for all services that need to be accessed via private endpoint
+# Create Service Endpoints for all services that need to be accessed via private endpoint - this is to force Function App to use private IP
 az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB Microsoft.KeyVault --name $function_subnet
 function_subnet_id=$(az network vnet subnet show -g $shared_network_rg -n $function_subnet --vnet-name $network_name --query 'id' -o tsv)
 
-az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $function_subnet_id --action allow
+# Set vnet restrictions on cosmos and storage
 az cosmosdb network-rule add -g $shared_rg --name $cosmosdb_account_name --subnet $function_subnet_id -g $shared_rg --vnet-name $network_name
+
+# Set firewall on shared storage account to deny public access
+az storage account update --resource-group $shared_rg --name $storage_name --default-action Deny
+az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $function_subnet_id --action allow
+
 
 az keyvault update --name $keyvault_name --resource-group $shared_rg --default-action deny
 # Only allow access to keyvault from FunctionApp subnet
