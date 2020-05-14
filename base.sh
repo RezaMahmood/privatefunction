@@ -9,6 +9,9 @@ network_name="vnet1"
 services_subnet="services"
 privateservices_subnet="privateservices"
 function_subnet="functionapp"
+lockdown_nsg="Lockdown"
+nsg_flow_log_name="lockdown_flowlog"
+monitoring_workspace="rezafuncmonitor"
 
 # Shared resources
 cosmosdb_account_name="rezacosmosacc2"

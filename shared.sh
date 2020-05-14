@@ -19,6 +19,7 @@ az storage container create --name $storage_container --account-name $storage_na
 
 #Need to disable subnet private endpoint policy
 az network vnet subnet update -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --disable-private-endpoint-network-policies true
+
 # Create private endpoint for the queue endpoint of the shared storage account
 az network private-endpoint create --name ${storage_name}-queue-pe --connection-name ${storage_name}-queue-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $storage_id --group-ids queue
 # Create private endpoint for the blob endpoint of the shared storage account
@@ -113,16 +114,20 @@ echo "Creating Private DNS A Record for privatelink.vaultcore.azure.net"
 az network private-dns record-set a add-record --record-set-name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg -a $keyvault_nic_ip
 
 
-# Create Service Endpoints for all services that need to be accessed via private endpoint - this is to force Function App to use private IP
+# Create Service Endpoints for all services that need to be accessed via private endpoint - this is to force Function App to use private IP. Also need to do this for the jumpbox VM for testing
 az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB Microsoft.KeyVault --name $function_subnet
+az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB --name $services_subnet
 function_subnet_id=$(az network vnet subnet show -g $shared_network_rg -n $function_subnet --vnet-name $network_name --query 'id' -o tsv)
+services_subnet_id=$(az network vnet subnet show -g $shared_network_rg -n $services_subnet --vnet-name $network_name --query 'id' -o tsv)
 
 # Set vnet restrictions on cosmos and storage
 az cosmosdb network-rule add -g $shared_rg --name $cosmosdb_account_name --subnet $function_subnet_id -g $shared_rg --vnet-name $network_name
+az cosmosdb network-rule add -g $shared_rg --name $cosmosdb_account_name --subnet $services_subnet_id -g $shared_rg --vnet-name $network_name
 
 # Set firewall on shared storage account to deny public access
 az storage account update --resource-group $shared_rg --name $storage_name --default-action Deny
 az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $function_subnet_id --action allow
+az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $services_subnet_id --action allow
 
 
 az keyvault update --name $keyvault_name --resource-group $shared_rg --default-action deny
