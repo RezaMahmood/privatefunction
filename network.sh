@@ -1,10 +1,7 @@
 
 az network vnet create -g $shared_network_rg -n $network_name --address-prefix 10.1.0.0/16 --subnet-name $services_subnet --subnet-prefix 10.1.0.0/27
-
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --address-prefixes 10.1.1.0/27
-
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n $function_subnet --address-prefixes 10.1.2.0/27
-
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n "AzureBastionSubnet" --address-prefixes 10.1.3.0/27
 
 #Create rules to estrict all outbound access from the vnet
@@ -23,5 +20,21 @@ vm_dns_obj=$(az vm create -g $shared_network_rg -n $vm_dns --image Win2016Datace
 az network public-ip create -n BastionPIP -g $shared_network_rg --sku Standard
 az network bastion create -n MyBastion --public-ip-address BastionPIP -g $shared_network_rg --vnet-name $network_name --location $location
 
-# Reference new VM as the DNS server for the vnet - no longer needed as app service can now use private zones (configured later)
-# az network vnet update -g $shared_network_rg -n $network_name --dns-servers $vm_dns_privateip
+#Need to disable subnet private endpoint policy
+az network vnet subnet update -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --disable-private-endpoint-network-policies true
+
+# Centralise DNS zone creation
+az network private-dns zone create -g $shared_network_rg -n "privatelink.queue.core.windows.net"
+az network private-dns zone create -g $shared_network_rg -n "privatelink.file.core.windows.net"
+az network private-dns zone create -g $shared_network_rg -n "privatelink.table.core.windows.net"
+az network private-dns zone create -g $shared_network_rg -n "privatelink.blob.core.windows.net"
+az network private-dns zone create -g $shared_network_rg -n "privatelink.documents.azure.com"
+az network private-dns zone create -g $shared_network_rg -n "privatelink.vaultcore.azure.net"
+
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.queue.core.windows.net" --name storagequeuevnet1link --virtual-network $network_name --registration-enabled false
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.blob.core.windows.net" --name blobvnet1link --virtual-network $network_name --registration-enabled false
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.documents.azure.com" --name sqlcosmosvnet1link --virtual-network $network_name --registration-enabled false
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.vaultcore.azure.net" --name vaultvnet1link --virtual-network $network_name --registration-enabled false
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.file.core.windows.net" --name storagefilevnet1link --virtual-network $network_name --registration-enabled false
+az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.table.core.windows.net" --name storagetablevnet1link --virtual-network $network_name --registration-enabled false
+

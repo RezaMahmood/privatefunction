@@ -34,13 +34,6 @@ az network private-endpoint create --name ${func_storage_name}-blob-pe --connect
 # Create private endpoint for the table endpoint of the shared storage account
 az network private-endpoint create --name ${func_storage_name}-table-pe --connection-name ${func_storage_name}-table-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $func_storage_id --group-ids table
 
-# Create a private zone for file and table endpoints and link to the vnet
-az network private-dns zone create -g $shared_network_rg -n "privatelink.file.core.windows.net"
-az network private-dns zone create -g $shared_network_rg -n "privatelink.table.core.windows.net"
-
-az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.file.core.windows.net" --name sharedfilednslink --virtual-network $network_name --registration-enabled false
-az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.table.core.windows.net" --name sharedtablednslink --virtual-network $network_name --registration-enabled false
-
 #Create DNS records for blob, file and table endpoints
 func_storage_file_nic_id=$(az network private-endpoint show --name ${func_storage_name}-file-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
 func_storage_blob_nic_id=$(az network private-endpoint show --name ${func_storage_name}-blob-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)

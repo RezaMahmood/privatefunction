@@ -17,20 +17,10 @@ az storage queue create --name $storage_queue --account-name $storage_name --acc
 # Create a blob container to simulate a file landing
 az storage container create --name $storage_container --account-name $storage_name --account-key $storage_key --auth-mode key
 
-#Need to disable subnet private endpoint policy
-az network vnet subnet update -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --disable-private-endpoint-network-policies true
-
 # Create private endpoint for the queue endpoint of the shared storage account
 az network private-endpoint create --name ${storage_name}-queue-pe --connection-name ${storage_name}-queue-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $storage_id --group-ids queue
 # Create private endpoint for the blob endpoint of the shared storage account
 az network private-endpoint create --name ${storage_name}-blob-pe --connection-name ${storage_name}-blob-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $storage_id --group-ids blob
-# Create private DNS zone for the private queue endpoint
-az network private-dns zone create -g $shared_network_rg -n "privatelink.queue.core.windows.net"
-az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.queue.core.windows.net" --name sharedqueuednslink --virtual-network $network_name --registration-enabled false
-# Create private DNS zone for the private blob endpoint
-az network private-dns zone create -g $shared_network_rg -n "privatelink.blob.core.windows.net"
-az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.blob.core.windows.net" --name sharedblobdnslink --virtual-network $network_name --registration-enabled false
-
 
 #Query for the network interface ID created as part of private queue endpoint
 storage_q_networkInterfaceId=$(az network private-endpoint show --name ${storage_name}-queue-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
@@ -70,9 +60,6 @@ az cosmosdb sql database create -a $cosmosdb_account_name -g $shared_rg -n $cosm
 az cosmosdb sql container create -a $cosmosdb_account_name -g $shared_rg -n $cosmosdb_container_name -p '/id' --throughput 400 -d $cosmosdb_database_name
 # Create private endpoint for CosmosDB
 az network private-endpoint create --name ${cosmosdb_account_name}-pe --connection-name ${cosmosdb_account_name}-sql-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $cosmosdb_account_id --group-ids Sql
-# Create private DNS zone for the private cosmosdb endpoint
-az network private-dns zone create -g $shared_network_rg -n "privatelink.documents.azure.com"
-az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.documents.azure.com" --name sharedcosmosdnslink --virtual-network $network_name --registration-enabled false
 
 #Query for the network interface ID created as part of private endpoint
 cosmosdb_networkInterfaceId=$(az network private-endpoint show --name ${cosmosdb_account_name}-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
@@ -101,9 +88,7 @@ az keyvault secret set --vault-name $keyvault_name --name $keyvault_secret_name 
 keyvault_id=$(echo $keyvault_object | jq -rc '.id')
 # Set private link for key vault
 az network private-endpoint create --name ${keyvault_name}-pe --connection-name ${keyvault_name}-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $keyvault_id --group-ids vault
-# Create private DNS zone for private keyvault
-az network private-dns zone create -g $shared_network_rg -n "privatelink.vaultcore.azure.net"
-az network private-dns link vnet create -g $shared_network_rg --zone-name "privatelink.vaultcore.azure.net" --name sharedvaultdnslink --virtual-network $network_name --registration-enabled false
+
 #Query for the NIC of the vault private endpoint
 keyvault_networkInterfaceId=$(az network private-endpoint show --name ${keyvault_name}-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
 keyvault_nic_object=$(az resource show --ids $keyvault_networkInterfaceId --api-version 2019-04-01 -o json)
