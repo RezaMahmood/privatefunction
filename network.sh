@@ -13,8 +13,8 @@ az network nsg rule create --name blockoutrule --nsg-name $lockdown_nsg -g $shar
 # Create rules to restrict all inbound access from the vnet
 az network nsg rule create --name blockinrule --nsg-name $lockdown_nsg -g $shared_network_rg --priority 100 --direction Inbound --access Deny --source-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all inbound traffic"
 
-# Create a DNS server - no longer required - will repurpose to jump/test box
-vm_dns_obj=$(az vm create -g $shared_network_rg -n $vm_dns --image Win2016Datacenter --admin-username $vm_dns_username --vnet-name $network_name --subnet $services_subnet --public-ip-address "" --private-ip-address $vm_dns_privateip --authentication-type password --admin-password $vm_dns_adminpassword --size Standard_B2ms )
+# Create a jump box from which to test (as we will lock down external access)
+vm_jump_obj=$(az vm create -g $shared_network_rg -n $vm_jump --image Win2016Datacenter --admin-username $vm_jump_username --vnet-name $network_name --subnet $services_subnet --public-ip-address "" --private-ip-address $vm_jump_privateip --authentication-type password --admin-password $vm_jump_adminpassword --size Standard_B2ms )
 
 # Create a Bastion
 az network public-ip create -n BastionPIP -g $shared_network_rg --sku Standard

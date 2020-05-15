@@ -14,11 +14,11 @@ nsg_flow_log_name="lockdown_flowlog"
 monitoring_workspace="rezafuncmonitor"
 
 # Shared resources
-cosmosdb_account_name="rezacosmosacc2"
+cosmosdb_account_name="rezacosmosacc3"
 cosmosdb_database_name="rezadb"
 cosmosdb_container_name="rezacontainer"
 
-storage_name="rezasharedstor5"
+storage_name="rezasharedstor6"
 storage_access_tier="Hot"
 storage_sku="Standard_LRS"
 storage_kind="StorageV2"
@@ -28,7 +28,7 @@ storage_container_file="sourcerecords.txt"
 eventhub_name="rezasharedhub"
 eventhub_namespace="rezahub"
 
-noaccess_storage_name="rezanoaccess2"
+noaccess_storage_name="rezanoaccess3"
 noaccess_storage_access_tier="Hot"
 noaccess_storage_sku="Standard_LRS"
 noaccess_storage_kind="StorageV2"
@@ -44,10 +44,10 @@ func_storage_access_tier="Hot"
 func_storage_sku="Standard_LRS"
 func_storage_kind="StorageV2"
 
-vm_dns="rezajump"
-vm_dns_username="rezauser"
-vm_dns_adminpassword="rezasupersecretpassword1@"
-vm_dns_privateip="10.1.0.4"
+vm_jump="rezajump"
+vm_jump_username="rezauser"
+vm_jump_adminpassword="rezasupersecretpassword1@"
+vm_jump_privateip="10.1.0.4"
 
 # Keyvault
 keyvault_name="rezakv3"
