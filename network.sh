@@ -16,6 +16,9 @@ az network nsg rule create --name blockinrule --nsg-name $lockdown_nsg -g $share
 # Create a jump box from which to test (as we will lock down external access)
 vm_jump_obj=$(az vm create -g $shared_network_rg -n $vm_jump --image Win2016Datacenter --admin-username $vm_jump_username --vnet-name $network_name --subnet $services_subnet --public-ip-address "" --private-ip-address $vm_jump_privateip --authentication-type password --admin-password $vm_jump_adminpassword --size Standard_B2ms )
 
+# Setting Azure DNS for the app doesn't appear to work so reverting to using a custom DNS server
+az network vnet update -g $shared_network_rg -n $network_name --dns-servers $vm_dns_privateip
+
 # Create a Bastion
 az network public-ip create -n BastionPIP -g $shared_network_rg --sku Standard
 az network bastion create -n MyBastion --public-ip-address BastionPIP -g $shared_network_rg --vnet-name $network_name --location $location
