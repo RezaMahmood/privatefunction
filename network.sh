@@ -8,6 +8,8 @@ az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n
 az network nsg create --name $lockdown_nsg -g $shared_network_rg
 az network nsg rule create --name allowdns --nsg-name $lockdown_nsg -g $shared_network_rg --priority 200 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges 53 --protocol '*' --description "Allow DNS queries"
 az network nsg rule create --name allowVnet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 210 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix VirtualNetwork --destination-port-ranges '*' --protocol '*' --description "Allow inter Vnet traffic"
+# Note that this could be scoped further to a specific region's storage accounts
+az network nsg rule create --name allowstorage --nsg-name $lockdown_nsg -g $shared_network_rg --priority 220 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix Storage --destination-port-ranges '*' --protocol '*' --description "Allow traffic to all storage accounts"
 az network nsg rule create --name blockoutrule --nsg-name $lockdown_nsg -g $shared_network_rg --priority 300 --direction Outbound --access Deny --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all outbound traffic origination from vnet"
 
 # Create rules to restrict all inbound access from the vnet
@@ -16,8 +18,8 @@ az network nsg rule create --name blockinrule --nsg-name $lockdown_nsg -g $share
 # Create a jump box from which to test (as we will lock down external access)
 vm_jump_obj=$(az vm create -g $shared_network_rg -n $vm_jump --image Win2016Datacenter --admin-username $vm_jump_username --vnet-name $network_name --subnet $services_subnet --public-ip-address "" --private-ip-address $vm_jump_privateip --authentication-type password --admin-password $vm_jump_adminpassword --size Standard_B2ms )
 
-# Setting Azure DNS for the app doesn't appear to work so reverting to using a custom DNS server
-az network vnet update -g $shared_network_rg -n $network_name --dns-servers $vm_dns_privateip
+# Setting Azure DNS for the app doesn't appear to work so reverting to using a custom DNS server - 168.63.129.16
+az network vnet update -g $shared_network_rg -n $network_name --dns-servers $vm_jump_privateip
 
 # Create a Bastion
 az network public-ip create -n BastionPIP -g $shared_network_rg --sku Standard

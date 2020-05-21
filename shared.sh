@@ -82,8 +82,8 @@ az eventhubs eventhub authorization-rule create --eventhub-name $eventhub_name -
 
 
 
-# Create Key Vault
-keyvault_object=$(az keyvault create -n $keyvault_name -g $shared_rg --location $location)
+# Create Key Vault - disable soft delete to avoid having to change keyvault name for POC - not recommended for Production
+keyvault_object=$(az keyvault create -n $keyvault_name -g $shared_rg --location $location --enable-soft-delete false)
 az keyvault secret set --vault-name $keyvault_name --name $keyvault_secret_name --value $keyvault_secret_value
 keyvault_id=$(echo $keyvault_object | jq -rc '.id')
 # Set private link for key vault

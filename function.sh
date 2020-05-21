@@ -20,11 +20,6 @@ az functionapp config appsettings set -n $functionapp_name -g $app_rg --settings
 #Enable virtual network trigger support - https://docs.microsoft.com/en-gb/azure/azure-functions/functions-networking-options#virtual-network-triggers-non-http
 az resource update -g $app_rg -n $functionapp_name/config/web --set properties.functionsRuntimeScaleMonitoringEnabled=1 --resource-type Microsoft.Web/sites
 
-#We will also need to ensure that the storage account that Functions uses will still be accessible once we apply NSG's restricting outbound traffic
-#Putting any kind of firewall restriction on the storage account will render the function inoperable
-#az storage account update --resource-group $app_rg --name $func_storage_name --default-action Deny
-#az storage account network-rule add -g $app_rg --account-name $func_storage_name --subnet $function_subnet_id --action allow
-#az storage account network-rule add -g $app_rg --account-name $func_storage_name  --subnet $services_subnet_id --action allow
 
 #However, function app appears to be able to understand private endpoints
 # Create private endpoint for the queue endpoint of the shared storage account
