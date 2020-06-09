@@ -11,8 +11,8 @@ namespace My.Function
         public static void Run(
             [QueueTrigger("queue", Connection = "SharedStor")]string myQueueItem, 
             [CosmosDB(
-                databaseName: "rezadb",
-                collectionName: "rezacontainer",
+                databaseName: "contosodb",
+                collectionName: "contosocontainer",
                 ConnectionStringSetting = "CosmosDBConnection")]out dynamic document,
             ILogger log)
         {
