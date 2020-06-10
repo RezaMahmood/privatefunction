@@ -66,11 +66,13 @@ cosmosdb_networkInterfaceId=$(az network private-endpoint show --name ${cosmosdb
 cosmosdb_nic_object=$(az resource show --ids $cosmosdb_networkInterfaceId --api-version 2019-04-01 -o json)
 # Get the content for privateIPAddress and FQDN matching the SQL server name - this needs to have jq installed - https://stedolan.github.io/jq/
 cosmosdb_nic_ip=$(echo $cosmosdb_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
+cosmosdb_regional_nic_ip=$(echo $cosmosdb_nic_object | jq -rc '.properties.ipConfigurations[1].properties.privateIPAddress')
 
 #Create DNS records 
 az network private-dns record-set a create --name $cosmosdb_account_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg  
 echo "Creating Private DNS A Record for privatelink.documents.azure.com"
 az network private-dns record-set a add-record --record-set-name $cosmosdb_account_name --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg -a $cosmosdb_nic_ip
+az network private-dns record-set a add-record --record-set-name $cosmosdb_account_name-$location --zone-name "privatelink.documents.azure.com" --resource-group $shared_network_rg -a $cosmosdb_regional_nic_ip
 
 
 
