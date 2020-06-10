@@ -10,6 +10,11 @@ az network nsg rule create --name allowdns --nsg-name $lockdown_nsg -g $shared_n
 az network nsg rule create --name allowVnet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 210 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix VirtualNetwork --destination-port-ranges '*' --protocol '*' --description "Allow inter Vnet traffic"
 # Note that this could be scoped further to a specific region's storage accounts
 az network nsg rule create --name allowstorage --nsg-name $lockdown_nsg -g $shared_network_rg --priority 220 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix Storage --destination-port-ranges '*' --protocol '*' --description "Allow traffic to all storage accounts"
+#Allow monitoring
+az network nsg rule create --name allowmonitor1 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 230 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix ActionGroup --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+az network nsg rule create --name allowmonitor2 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 240 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix ApplicationInsightsAvailability --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+az network nsg rule create --name allowmonitor3 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 250 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix AzureMonitor --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+
 az network nsg rule create --name blockinternet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 300 --direction Outbound --access Deny --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all internet traffic originating from vnet"
 
 # Create rules to restrict all inbound access from the vnet
