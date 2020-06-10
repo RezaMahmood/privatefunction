@@ -23,11 +23,12 @@ namespace My.Function
         private readonly IEnumerable<CloudBlobClient> _cloudBlobClients;
         private ILogger Logger { get; set; }
         
-        public DeniedOutboundCalls(IConfiguration config, HttpClient http, IEnumerable<CloudBlobClient> cloudBlobClients)
+        public DeniedOutboundCalls(IConfiguration config, HttpClient http, IEnumerable<CloudBlobClient> cloudBlobClients, ILogger logger)
         {
             _config = config;
             _http = http;
             _cloudBlobClients = cloudBlobClients;
+            Logger = logger;
         }
 
         [FunctionName("DeniedOutboundCalls")]
