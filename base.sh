@@ -14,6 +14,7 @@ function_subnet="functionapp"
 lockdown_nsg="Lockdown"
 nsg_flow_log_name="lockdown_flowlog"
 monitoring_workspace="contosofuncmon"$version
+firewall_name="afw1"
 
 # Shared resources
 cosmosdb_account_name="contosocosmos"$version
