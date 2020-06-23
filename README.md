@@ -2,6 +2,8 @@
 
 The scripts in this repo are intended to deploy Azure Functions to demonstrate network isolation when communicating with other Azure PaaS services.  Note that this deployment does not represent a best practice way of creating Azure resources and is mainly intended to demonstrate the principles behind locking down Azure PaaS services and applying network isolation.
 
+[Note: at this time, although the scripts deploy Azure Key Vault, none of the Functions deployed (in the Application folder) make use of it.  The function using Azure Event Hub works but not through Private Endpoint as Private Endpoint is only available on the Dedicated SKU for Azure Event Hub]
+
 ## Architecture
 
 The scripts in this repo will provision:
@@ -12,8 +14,10 @@ The scripts in this repo will provision:
 - CosmosDB Account
 - Azure Event Hub
 - Azure Key Vault
+- Azure Firewall
+- Private Endpoints and associated DNS entries
 
-![Azure Function connecting to Private Endpoints](https://github.com/rezamahmood/privatefunction/PrivateFunction.gif)
+![Azure Function connecting to Private Endpoints](https://github.com/RezaMahmood/privatefunction/blob/master/PrivateFunction.gif)
 
 ## Getting Started
 
@@ -23,7 +27,7 @@ The scripts in this repo will provision:
 
 - Edit base.sh to set environment variables.  Note that some variables are globally unique such as storage account names.
   
-- Run scripts in the following order:
+- Run scripts in the following order (or run deploy_infra.sh):
 
   - base.sh
 
@@ -35,7 +39,7 @@ The scripts in this repo will provision:
 
   - function.sh
 
-  - lockdown.sh (leave this until everything else has been set up, including configuring test set up)
+  - monitoring.sh
 
 - Deploy the application to the Function App you have just created!
 
@@ -70,9 +74,9 @@ Creates the resource groups needed for the environment
 
 ### network.sh
 
-This file contains all the base network configurations including NSG and subnet configurations. Network resources are separated for RBAC.
+This file contains all the base network configurations including NSG and subnet configurations. Network resources are separated to cater for RBAC scenarios
 
-App Service does not support Azure Private DNS Zones yet, so we will need to install a DNS server and configure that to use the Private Link address.
+App Service does support Azure Private DNS Zones and requires an update to the configuration to set WEBSITE_DNS_SERVER=168.63.129.16, however, this wasn't working reliably at the time of creating these scripts so we will install a DNS server and configure that to forward to Azure DNS to resolve private endpoints.
 
 ### shared.sh
 
@@ -82,6 +86,10 @@ This file contains all the shared resources that the application will use such a
 
 This file contains configuration for the Function App that will be network isolated.  This needs to be run last as it will use variables from resources created previously such as CosmosDB and Storage Account connection strings.
 
-### lockdown.sh
+### monitoring.sh
 
-This file applies NSG to the subnets to prevent Function App from going beyond the vnet
+This script will set up monitoring resources to allow logging of network traffic
+
+### cleanup.sh
+
+Deletes all the resource groups that are deployed (and all child resources)
