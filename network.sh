@@ -3,6 +3,8 @@ az network vnet create -g $shared_network_rg -n $network_name --address-prefix 1
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n $privateservices_subnet --address-prefixes 10.1.1.0/27
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n $function_subnet --address-prefixes 10.1.2.0/27
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n "AzureBastionSubnet" --address-prefixes 10.1.3.0/27
+az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n "AzureFirewallSubnet" --address-prefixes 10.1.4.0/26
+
 
 #Create rules to estrict all outbound access from the vnet
 az network nsg create --name $lockdown_nsg -g $shared_network_rg
@@ -50,7 +52,7 @@ az network private-dns link vnet create -g $shared_network_rg --zone-name "priva
 
 # Configure Firewall - https://docs.microsoft.com/en-us/azure/firewall/deploy-cli
 az extension add -n azure-firewall
-az network firewall create --name $firewall_name -g $shared_network_rg --location $location
+firewall_object=$(az network firewall create --name $firewall_name -g $shared_network_rg --location $location)
 az network public-ip create --name afw-pip --resource-group $shared_network_rg --location $location  --allocation-method static --sku standard
 az network firewall ip-config create --firewall-name $firewall_name --name afw-config --public-ip-address afw-pip -g $shared_network_rg --vnet-name $network_name
 az network firewall update --name $firewall_name -g $shared_network_rg
@@ -58,9 +60,10 @@ az network firewall update --name $firewall_name -g $shared_network_rg
 firewall_private_ip=$(az network firewall ip-config list -g $shared_network_rg -f $firewall_name --query "[?name=='afw-config'].privateIpAddress" --output tsv)
 
 az network route-table create --name "$firewall_name-rt-table" -g $shared_network_rg --location $location --disable-bgp-route-propagation true
-az network route-table route create -g $shared_network_rg --name function-route  --route-table-name "$firewall_name-rt-table" --address-prefix 0.0.0.0/0 --next-hop-type VirtualAppliance --next-hop-ip-address $firewall_private_ip
+az network route-table route create -g $shared_network_rg --name firewall-route  --route-table-name "$firewall_name-rt-table" --address-prefix 0.0.0.0/0 --next-hop-type VirtualAppliance --next-hop-ip-address $firewall_private_ip
 az network vnet subnet update -n $function_subnet -g $shared_network_rg --vnet-name $network_name --address-prefixes 10.1.2.0/27 --route-table "$firewall_name-rt-table"
 
 #Allow Function app to access storage through the Firewall
-az network firewall application-rule create --collection-name App-Function --firewall-name $firewall_name --name allowAppStorage --protocols Http=80 Https=443 -g $shared_network_rg --action Allow --target-fqdns "$func_storage_name.blob.core.windows.net" "$func_storage_name.files.core.windows.net" "$func_storage_name.table.core.windows.net" "$func_storage_name.queue.core.windows.net" "$funcjob_storage_name.blob.core.windows.net" "$funcjob_storage_name.files.core.windows.net" "$funcjob_storage_name.table.core.windows.net" "$funcjob_storage_name.queue.core.windows.net" --priority 200 --source-addresses "10.1.2.0/27" "10.1.0.0/27"
-az network firewall application-rule create --collection-name App-Function --firewall-name $firewall_name --name allowAppInsights --protocols Http=80 Https=443 -g $shared_network_rg --action Allow --target-fqdns "*.services.visualstudio.com" "*.applicationinsights.microsoft.com" "*.applicationinsights.azure.com"  --source-addresses "10.1.2.0/27" "10.1.0.0/27"
+az network firewall application-rule create --collection-name App-Function --firewall-name $firewall_name --name allowAppStorage --protocols Http=80 Https=443 -g $shared_network_rg --action Allow --target-fqdns "$func_storage_name.blob.core.windows.net" "$func_storage_name.file.core.windows.net" "$func_storage_name.table.core.windows.net" "$func_storage_name.queue.core.windows.net" "$funcjob_storage_name.blob.core.windows.net" "$funcjob_storage_name.file.core.windows.net" "$funcjob_storage_name.table.core.windows.net" "$funcjob_storage_name.queue.core.windows.net" --priority 200 --source-addresses "10.1.2.0/27" "10.1.0.0/27"
+az network firewall application-rule create --collection-name App-Function2 --firewall-name $firewall_name --name allowAppInsights --protocols Http=80 Https=443 -g $shared_network_rg --action Allow --target-fqdns "*.services.visualstudio.com" "*.applicationinsights.microsoft.com" "*.applicationinsights.azure.com"  --source-addresses "10.1.2.0/27" "10.1.0.0/27" --priority 300
+az network firewall application-rule create --collection-name App-Function3 --firewall-name $firewall_name --name allowKudu --protocols Http=80 Https=443 -g $shared_network_rg --action Allow --target-fqdns "$functionapp_name.scm.azurewebsites.net" --source-addresses "10.1.2.0/27" "10.1.0.0/27" --priority 400

@@ -24,33 +24,3 @@ az functionapp config appsettings set -n $functionapp_name -g $app_rg --settings
 #Enable virtual network trigger support - https://docs.microsoft.com/en-gb/azure/azure-functions/functions-networking-options#virtual-network-triggers-non-http
 az resource update -g $app_rg -n $functionapp_name/config/web --set properties.functionsRuntimeScaleMonitoringEnabled=1 --resource-type Microsoft.Web/sites
 
-
-
-# Create private endpoint for the queue endpoint of the shared storage account
-az network private-endpoint create --name ${func_storage_name}-file-pe --connection-name ${func_storage_name}-file-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $func_storage_id --group-ids file
-# Create private endpoint for the blob endpoint of the shared storage account
-az network private-endpoint create --name ${func_storage_name}-blob-pe --connection-name ${func_storage_name}-blob-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $func_storage_id --group-ids blob
-# Create private endpoint for the table endpoint of the shared storage account
-az network private-endpoint create --name ${func_storage_name}-table-pe --connection-name ${func_storage_name}-table-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $func_storage_id --group-ids table
-
-#Create DNS records for blob, file and table endpoints
-func_storage_file_nic_id=$(az network private-endpoint show --name ${func_storage_name}-file-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
-func_storage_blob_nic_id=$(az network private-endpoint show --name ${func_storage_name}-blob-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
-func_storage_table_nic_id=$(az network private-endpoint show --name ${func_storage_name}-table-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
-
-func_storage_file_nic_object=$(az resource show --ids $func_storage_file_nic_id --api-version 2019-04-01 -o json)
-func_storage_blob_nic_object=$(az resource show --ids $func_storage_blob_nic_id --api-version 2019-04-01 -o json)
-func_storage_table_nic_object=$(az resource show --ids $func_storage_table_nic_id --api-version 2019-04-01 -o json)
-
-func_storage_file_nic_ip=$(echo $func_storage_file_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
-func_storage_blob_nic_ip=$(echo $func_storage_blob_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
-func_storage_table_nic_ip=$(echo $func_storage_table_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
-
-az network private-dns record-set a create --name $func_storage_name --zone-name "privatelink.file.core.windows.net" --resource-group $shared_network_rg  
-az network private-dns record-set a create --name $func_storage_name --zone-name "privatelink.table.core.windows.net" --resource-group $shared_network_rg  
-az network private-dns record-set a create --name $func_storage_name --zone-name "privatelink.blob.core.windows.net" --resource-group $shared_network_rg  
-
-az network private-dns record-set a add-record --record-set-name $func_storage_name --zone-name "privatelink.blob.core.windows.net" --resource-group $shared_network_rg -a $func_storage_blob_nic_ip
-az network private-dns record-set a add-record --record-set-name $func_storage_name --zone-name "privatelink.file.core.windows.net" --resource-group $shared_network_rg -a $func_storage_file_nic_ip
-az network private-dns record-set a add-record --record-set-name $func_storage_name --zone-name "privatelink.table.core.windows.net" --resource-group $shared_network_rg -a $func_storage_table_nic_ip
-

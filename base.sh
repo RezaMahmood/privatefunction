@@ -1,5 +1,5 @@
 
-version=$RANDOM
+version=13179
 
 location="southeastasia"
 shared_rg="PrivateFunctionSharedRG"

@@ -1,0 +1,13 @@
+Deploy to Function App
+
+Build the App
+
+dotnet publish --configuration Release /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary
+
+cd to publish directory
+zip -r $functionapp_name.zip ./
+
+az functionapp deployment source config-zip -g $app_rg -n $funcationapp_name --src ./$funcationapp_name.zip
+
+Test the DeniedOutbound to generate firewall logs
+ab -n 100 -c 10 https://$funcationapp_name.azurewebsites.net/api/DeniedOutboundCalls

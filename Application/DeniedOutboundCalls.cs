@@ -23,21 +23,20 @@ namespace My.Function
         private readonly IEnumerable<CloudBlobClient> _cloudBlobClients;
         private ILogger Logger { get; set; }
         
-        public DeniedOutboundCalls(IConfiguration config, HttpClient http, IEnumerable<CloudBlobClient> cloudBlobClients, ILogger logger)
+        public DeniedOutboundCalls(IConfiguration config, HttpClient http, IEnumerable<CloudBlobClient> cloudBlobClients)
         {
             _config = config;
             _http = http;
-            _cloudBlobClients = cloudBlobClients;
-            Logger = logger;
+            _cloudBlobClients = cloudBlobClients;    
+
         }
 
         [FunctionName("DeniedOutboundCalls")]
         public  async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req,
-            ILogger log)
-        {
-            Logger = log;
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = null)] HttpRequest req, ILogger logger)
+        {            
+            Logger = logger;
+            Logger.LogInformation("C# HTTP trigger function processed a request.");
 
             string name = req.Query["name"];
 

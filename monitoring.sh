@@ -12,3 +12,7 @@ noaccess_storage_id=$(az resource show -g $shared_rg -n $noaccess_storage_name -
 monitoring_workspace_object=$(az monitor log-analytics workspace create -g $shared_network_rg --workspace-name $monitoring_workspace -l $location)
 monitoring_workspace_id=$(echo $monitoring_workspace_object | jq -rc '.id')
 az network watcher flow-log create -g $shared_network_rg -n $nsg_flow_log_name --enabled true --format json --nsg $lockdown_nsg --storage-account $noaccess_storage_id --retention 30 --location $location --workspace $monitoring_workspace_id --traffic-analytics true
+
+#Monitor Functions, Firewall
+#firewall_id=$(echo $firewall_object | jq -rc '.id')
+#az monitor diagnostic-settings create --resource $firewall_id -n "FirewallLogsToLogAnalytics" --workspace $monitoring_workspace_id

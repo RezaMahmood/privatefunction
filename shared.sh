@@ -102,7 +102,7 @@ az network private-dns record-set a add-record --record-set-name $keyvault_name 
 
 
 # Create Service Endpoints for all services that need to be accessed via private endpoint - this is to force Function App to use private IP. Also need to do this for the jumpbox VM for testing
-az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB Microsoft.KeyVault --name $function_subnet
+#az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB Microsoft.KeyVault --name $function_subnet
 az network vnet subnet update --vnet-name $network_name -g $shared_network_rg --service-endpoints Microsoft.Storage Microsoft.AzureCosmosDB --name $services_subnet
 function_subnet_id=$(az network vnet subnet show -g $shared_network_rg -n $function_subnet --vnet-name $network_name --query 'id' -o tsv)
 services_subnet_id=$(az network vnet subnet show -g $shared_network_rg -n $services_subnet --vnet-name $network_name --query 'id' -o tsv)
