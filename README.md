@@ -4,7 +4,16 @@ The scripts in this repo are intended to deploy Azure Functions to demonstrate n
 
 ## Architecture
 
+The scripts in this repo will provision:
 
+- Premium Function App with Virtual Network integration
+- Virtual Network for services to integrate with
+- Storage Accounts
+- CosmosDB Account
+- Azure Event Hub
+- Azure Key Vault
+
+![Azure Function connecting to Private Endpoints](https://github.com/rezamahmood/privatefunction/PrivateFunction.gif)
 
 ## Getting Started
 
