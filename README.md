@@ -74,7 +74,7 @@ If Azure Firewall and Route tables have been configured correctly, this Function
 
 ## Description of scripts
 
-### base.sh
+### variables.sh
 
 This file contains variables required to deploy the environment and is used by subsequent cli scripts.  This file should be edited to use unique Azure resource names.  
 
