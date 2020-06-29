@@ -85,20 +85,20 @@ az eventhubs eventhub authorization-rule create --eventhub-name $eventhub_name -
 
 
 # Create Key Vault - disable soft delete to avoid having to change keyvault name for POC - not recommended for Production
-keyvault_object=$(az keyvault create -n $keyvault_name -g $shared_rg --location $location --enable-soft-delete false)
-az keyvault secret set --vault-name $keyvault_name --name $keyvault_secret_name --value $keyvault_secret_value
-keyvault_id=$(echo $keyvault_object | jq -rc '.id')
+#keyvault_object=$(az keyvault create -n $keyvault_name -g $shared_rg --location $location --enable-soft-delete false)
+#az keyvault secret set --vault-name $keyvault_name --name $keyvault_secret_name --value $keyvault_secret_value
+#keyvault_id=$(echo $keyvault_object | jq -rc '.id')
 # Set private link for key vault
-az network private-endpoint create --name ${keyvault_name}-pe --connection-name ${keyvault_name}-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $keyvault_id --group-ids vault
+#az network private-endpoint create --name ${keyvault_name}-pe --connection-name ${keyvault_name}-conn -g $shared_network_rg --vnet-name $network_name --subnet $privateservices_subnet --private-connection-resource-id $keyvault_id --group-ids vault
 
 #Query for the NIC of the vault private endpoint
-keyvault_networkInterfaceId=$(az network private-endpoint show --name ${keyvault_name}-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
-keyvault_nic_object=$(az resource show --ids $keyvault_networkInterfaceId --api-version 2019-04-01 -o json)
-keyvault_nic_ip=$(echo $keyvault_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
+#keyvault_networkInterfaceId=$(az network private-endpoint show --name ${keyvault_name}-pe --resource-group $shared_network_rg --query 'networkInterfaces[0].id' -o tsv)
+#keyvault_nic_object=$(az resource show --ids $keyvault_networkInterfaceId --api-version 2019-04-01 -o json)
+#keyvault_nic_ip=$(echo $keyvault_nic_object | jq -rc '.properties.ipConfigurations[0].properties.privateIPAddress')
 #Create DNS records for keyvault private link
-az network private-dns record-set a create --name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg
-echo "Creating Private DNS A Record for privatelink.vaultcore.azure.net"
-az network private-dns record-set a add-record --record-set-name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg -a $keyvault_nic_ip
+#az network private-dns record-set a create --name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg
+#echo "Creating Private DNS A Record for privatelink.vaultcore.azure.net"
+#az network private-dns record-set a add-record --record-set-name $keyvault_name --zone-name "privatelink.vaultcore.azure.net" --resource-group $shared_network_rg -a $keyvault_nic_ip
 
 
 # Create Service Endpoints for all services that need to be accessed via private endpoint - this is to force Function App to use private IP. Also need to do this for the jumpbox VM for testing
@@ -113,10 +113,10 @@ az cosmosdb network-rule add -g $shared_rg --name $cosmosdb_account_name --subne
 
 # Set firewall on shared storage account to deny public access
 az storage account update --resource-group $shared_rg --name $storage_name --default-action Deny
-az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $function_subnet_id --action allow
-az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $services_subnet_id --action allow
+#az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $function_subnet_id --action allow
+#az storage account network-rule add -g $shared_rg --account-name $storage_name  --subnet $services_subnet_id --action allow
 
 
-az keyvault update --name $keyvault_name --resource-group $shared_rg --default-action deny
+#az keyvault update --name $keyvault_name --resource-group $shared_rg --default-action deny
 # Only allow access to keyvault from FunctionApp subnet
-az keyvault network-rule add --name $keyvault_name -g $shared_rg --subnet $function_subnet_id --vnet-name $network_name
+#az keyvault network-rule add --name $keyvault_name -g $shared_rg --subnet $function_subnet_id --vnet-name $network_name

@@ -1,4 +1,4 @@
-source base.sh
+source variables.sh
 source resourcegroups.sh
 source network.sh
 source shared.sh

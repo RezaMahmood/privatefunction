@@ -6,21 +6,23 @@ az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n
 az network vnet subnet create -g $shared_network_rg --vnet-name $network_name -n "AzureFirewallSubnet" --address-prefixes 10.1.4.0/26
 
 
-#Create rules to estrict all outbound access from the vnet
-az network nsg create --name $lockdown_nsg -g $shared_network_rg
-az network nsg rule create --name allowdns --nsg-name $lockdown_nsg -g $shared_network_rg --priority 200 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges 53 --protocol '*' --description "Allow DNS queries"
-az network nsg rule create --name allowVnet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 210 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix VirtualNetwork --destination-port-ranges '*' --protocol '*' --description "Allow inter Vnet traffic"
-# Note that this could be scoped further to a specific region's storage accounts
-az network nsg rule create --name allowstorage --nsg-name $lockdown_nsg -g $shared_network_rg --priority 220 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix Storage --destination-port-ranges '*' --protocol '*' --description "Allow traffic to all storage accounts"
-#Allow monitoring
-az network nsg rule create --name allowmonitor1 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 230 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix ActionGroup --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
-az network nsg rule create --name allowmonitor2 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 240 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix ApplicationInsightsAvailability --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
-az network nsg rule create --name allowmonitor3 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 250 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix AzureMonitor --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+#Create rules to estrict all outbound access from the vnet - these are optional in the context of using Azure Firewall
 
-az network nsg rule create --name blockinternet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 300 --direction Outbound --access Deny --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all internet traffic originating from vnet"
+#az network nsg create --name $lockdown_nsg -g $shared_network_rg
+#az network nsg rule create --name allowdns --nsg-name $lockdown_nsg -g $shared_network_rg --priority 200 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges 53 --protocol '*' --description "Allow DNS queries"
+#az network nsg rule create --name allowVnet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 210 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix VirtualNetwork --destination-port-ranges '*' --protocol '*' --description "Allow inter Vnet traffic"
+# Note that this could be scoped further to a specific region's storage accounts
+#az network nsg rule create --name allowstorage --nsg-name $lockdown_nsg -g $shared_network_rg --priority 220 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix Storage --destination-port-ranges '*' --protocol '*' --description "Allow traffic to all storage accounts"
+#Allow monitoring
+#az network nsg rule create --name allowmonitor1 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 230 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix ActionGroup --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+#az network nsg rule create --name allowmonitor2 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 240 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix ApplicationInsightsAvailability --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+#az network nsg rule create --name allowmonitor3 --nsg-name $lockdown_nsg -g $shared_network_rg --priority 250 --direction Outbound --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefix AzureMonitor --destination-port-ranges '*' --protocol '*' --description "Allow Azure Monitor"
+
+#az network nsg rule create --name blockinternet --nsg-name $lockdown_nsg -g $shared_network_rg --priority 300 --direction Outbound --access Deny --source-address-prefixes VirtualNetwork --destination-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all internet traffic originating from vnet"
 
 # Create rules to restrict all inbound access from the vnet
-az network nsg rule create --name blockinrule --nsg-name $lockdown_nsg -g $shared_network_rg --priority 100 --direction Inbound --access Deny --source-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all inbound traffic"
+#az network nsg rule create --name blockinrule --nsg-name $lockdown_nsg -g $shared_network_rg --priority 100 --direction Inbound --access Deny --source-address-prefixes Internet --destination-port-ranges '*' --protocol '*' --description "Block all inbound traffic"
+
 
 # Create a jump box from which to test (as we will lock down external access)
 vm_jump_obj=$(az vm create -g $shared_network_rg -n $vm_jump --image Win2016Datacenter --admin-username $vm_jump_username --vnet-name $network_name --subnet $services_subnet --public-ip-address "" --private-ip-address $vm_jump_privateip --authentication-type password --admin-password $vm_jump_adminpassword --size Standard_B2ms )
