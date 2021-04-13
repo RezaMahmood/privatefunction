@@ -25,7 +25,7 @@ The scripts in this repo will provision:
 
 - Install jq to enable json parsing - https://stedolan.github.io/jq/
 
-- Edit base.sh to set environment variables.  Note that some variables are globally unique such as storage account names.
+- Edit variables.sh to set environment variables.  Note that some variables are globally unique such as storage account names.
   
 - From a bash shell
 
